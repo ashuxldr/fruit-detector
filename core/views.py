@@ -9,8 +9,9 @@ from bs4 import BeautifulSoup
 import cv2
 import os
 from django.shortcuts import render
+from .models import Fruit, Session, Alert
 # BASE_DIR / 'db.sqlite3'
-
+from datetime import date
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -69,6 +70,45 @@ def fetch_calories(prediction):
         st.error("Can't able to fetch the Calories")
         print(e)
 
+def fetch_fat(prediction):
+    try:
+        # url = 'https://www.google.com/search?&q=calories in cabbage'
+        url = 'https://www.google.com/search?&q=fat in ' + prediction
+        req = requests.get(url).text
+        scrap = BeautifulSoup(req, 'html.parser')
+        calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd").text
+        print("fat", calories)
+        return calories
+    except Exception as e:
+        st.error("Can't able to fetch the Calories")
+        print(e)
+
+def fetch_protein(prediction):
+    try:
+        # url = 'https://www.google.com/search?&q=calories in cabbage'
+        url = 'https://www.google.com/search?&q=protein in ' + prediction
+        req = requests.get(url).text
+        scrap = BeautifulSoup(req, 'html.parser')
+        calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd").text
+        print("protein", calories)
+        return calories
+    except Exception as e:
+        st.error("Can't able to fetch the Calories")
+        print(e)
+
+def fetch_carbohydrates(prediction):
+    try:
+        # url = 'https://www.google.com/search?&q=calories in cabbage'
+        url = 'https://www.google.com/search?&q=carbohydrates in ' + prediction
+        req = requests.get(url).text
+        scrap = BeautifulSoup(req, 'html.parser')
+        calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd").text
+        print("calories", calories)
+        return calories
+    except Exception as e:
+        st.error("Can't able to fetch the Calories")
+        print(e)
+
 def processed_img(img_path):
     img = load_img(img_path, target_size=(224, 224, 3))
     img = img_to_array(img)
@@ -83,9 +123,74 @@ def processed_img(img_path):
     return res.capitalize()
 
 def index(req):
-    x = run()
-    print(x)
-    return render(req, 'core/index.html', {"lst" : x})
+    ctx = {}
+    fruits = run()
+    ctx['fruits'] = fruits
+    calories = []
+    fat = []
+    protein = []
+    carbohydrates = []
+    ctx['total_calories'] = 0
+    ctx['total_fat'] = 0
+    ctx['total_protein'] = 0
+    ctx['total_carbohydrates'] = 0
+    for fruit in fruits:
+        obj = Fruit.objects.filter(name=fruit)
+        calories.append(obj[0].calorie)
+        fat.append(obj[0].fat)
+        protein.append(obj[0].protein)
+        carbohydrates.append(obj[0].carbohydrate)
+        ctx['total_calories'] = ctx['total_calories'] + obj[0].calorie
+        ctx['total_fat'] = ctx['total_fat'] + obj[0].fat
+        ctx['total_protein'] = ctx['total_protein'] + obj[0].protein
+        ctx['total_carbohydrates'] = ctx['total_carbohydrates'] + obj[0].carbohydrate
+    name = ' '.join(fruits)
+    Session.objects.create(name=name, total_calorie=ctx['total_calories'], total_fat=ctx['total_fat'],
+                                     total_protein=ctx['total_protein'], total_carbohydrate=ctx['total_carbohydrates'])
+    ctx['calories'] = calories
+    ctx['fat'] = fat
+    ctx['protein'] = protein
+    ctx['carbohydrates'] = carbohydrates
+    return render(req, 'core/index.html', ctx)
+
+
+def setAlert(req):
+    alert = Alert.objects.get(pk=1)
+    sessions = Session.objects.filter(date=date.today())
+    day_calorie = 0
+    day_fat = 0
+    day_protein = 0
+    day_carbohydrate = 0
+    for session in sessions:
+        day_calorie = day_calorie + session.total_calorie
+        day_fat = day_fat + session.total_fat
+        day_protein = day_protein + session.total_protein
+        day_carbohydrate = day_carbohydrate + session.total_carbohydrate
+    ctx = {}
+    if req.method == 'POST':
+        alert.alert_calorie = req.POST.get('calorie', '')
+        alert.alert_fat = req.POST.get('fat', '')
+        alert.alert_protein = req.POST.get('protein', '')
+        alert.alert_carbohydrate = req.POST.get('carbohydrate', '')
+        alert.save()
+    ctx['message1'] = False
+    ctx['message2'] = False
+    ctx['message3'] = False
+    ctx['message4'] = False
+    if float(alert.alert_calorie)<day_calorie:
+        ctx['message1'] = "CALORIE LIMIT EXCEEDED"
+    if float(alert.alert_fat)<day_fat:
+        ctx['message2'] = "FAT LIMIT EXCEEDED"
+    if float(alert.alert_protein)<day_protein:
+        ctx['message3'] = "PROTEIN LIMIT EXCEEDED"
+    if float(alert.alert_carbohydrate)<day_carbohydrate:
+        ctx['message4'] = "CARBOHYDRATE LIMIT EXCEEDED"
+    ctx['alert_calorie'] = alert.alert_calorie
+    ctx['alert_fat'] = alert.alert_fat
+    ctx['alert_protein'] = alert.alert_protein
+    ctx['alert_carbohydrate'] = alert.alert_carbohydrate
+    return render(req, 'core/dashboard.html', ctx)
+
 
 
 def run():
