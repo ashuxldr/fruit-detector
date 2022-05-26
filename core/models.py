@@ -1,5 +1,5 @@
 from django.db import models
-from datetime import date
+from datetime import date, datetime
 
 class Fruit(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -18,6 +18,7 @@ class Session(models.Model):
     total_protein = models.DecimalField(max_digits=10, decimal_places=2)
     total_fat = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField(default=date.today())
+    datetime = models.DateTimeField(default=datetime.now(), blank=True)
 
 
 class Alert(models.Model):

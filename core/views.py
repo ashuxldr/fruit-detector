@@ -13,7 +13,8 @@ from .models import Fruit, Session, Alert
 # BASE_DIR / 'db.sqlite3'
 from datetime import date
 from pathlib import Path
-
+from django.views.decorators.csrf import csrf_exempt #change1
+# import weights
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -122,9 +123,14 @@ def processed_img(img_path):
     print(res)
     return res.capitalize()
 
+weightsArray = [100,120,123,124]
+WEIGHTS = [100,120,123,124]
+
+
 def index(req):
+    # WEIGHTS = weights()
     ctx = {}
-    fruits = run()
+    fruits = run()  # step.1
     ctx['fruits'] = fruits
     calories = []
     fat = []
@@ -134,12 +140,16 @@ def index(req):
     ctx['total_fat'] = 0
     ctx['total_protein'] = 0
     ctx['total_carbohydrates'] = 0
+    i = 0
+    # weights = exec('123.py')
     for fruit in fruits:
-        obj = Fruit.objects.filter(name=fruit)
+        obj = Fruit.objects.filter(name=fruit) # step.5
+        # calories.append(obj[0].calorie * (WEIGHT[i]/100))
         calories.append(obj[0].calorie)
         fat.append(obj[0].fat)
         protein.append(obj[0].protein)
         carbohydrates.append(obj[0].carbohydrate)
+        # c = c+1
         ctx['total_calories'] = ctx['total_calories'] + obj[0].calorie
         ctx['total_fat'] = ctx['total_fat'] + obj[0].fat
         ctx['total_protein'] = ctx['total_protein'] + obj[0].protein
@@ -151,9 +161,10 @@ def index(req):
     ctx['fat'] = fat
     ctx['protein'] = protein
     ctx['carbohydrates'] = carbohydrates
+    ctx['weightsArray'] = weightsArray
     return render(req, 'core/index.html', ctx)
 
-
+@csrf_exempt
 def setAlert(req):
     alert = Alert.objects.get(pk=1)
     sessions = Session.objects.filter(date=date.today())
@@ -167,11 +178,20 @@ def setAlert(req):
         day_protein = day_protein + session.total_protein
         day_carbohydrate = day_carbohydrate + session.total_carbohydrate
     ctx = {}
+    ctx['sessions'] = sessions
+    ctx['day_calorie'] = day_calorie
+    ctx['day_fat'] = day_fat
+    ctx['day_protein'] = day_protein
+    ctx['day_carbohydrate'] = day_carbohydrate
     if req.method == 'POST':
-        alert.alert_calorie = req.POST.get('calorie', '')
-        alert.alert_fat = req.POST.get('fat', '')
-        alert.alert_protein = req.POST.get('protein', '')
-        alert.alert_carbohydrate = req.POST.get('carbohydrate', '')
+        if req.POST.get('calorie'):
+            alert.alert_calorie = req.POST.get('calorie', '')
+        if req.POST.get('fat'):
+            alert.alert_fat = req.POST.get('fat', '')
+        if req.POST.get('protein'):
+            alert.alert_protein = req.POST.get('protein', '')
+        if req.POST.get('carbohydrate'):
+            alert.alert_carbohydrate = req.POST.get('carbohydrate', '')
         alert.save()
     ctx['message1'] = False
     ctx['message2'] = False
@@ -192,12 +212,21 @@ def setAlert(req):
     return render(req, 'core/dashboard.html', ctx)
 
 
+def sessions(req):
+    sessions = Session.objects.filter(date=date.today())
+    ctx = {}
+    ctx['sessions'] = sessions
+    return render(req, 'core/sessions.html', ctx)
 
+
+
+# step.2
 def run():
     lst = ['waka1.jpg', 'waka2.jpg', 'waka3.jpg', 'waka4.jpg']
     lst1 = []
     for img in lst:
         lst1.append(processed_img(BASE_DIR/'core/upload_images'/img))
     return lst1
+    # step.3 fruits
         # obj = Calories.objects.create(name=res, calorie = '1', ca)
         # obj.save()

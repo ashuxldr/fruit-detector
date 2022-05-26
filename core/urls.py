@@ -15,8 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from .views import index, setAlert
+from .views import index, setAlert, sessions
 urlpatterns = [
     path('', index, name="index"),
     path('dashboard/', setAlert, name="dashboard"),
+    path('sessions/', sessions, name="sessions"),
 ]
